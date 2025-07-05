@@ -395,8 +395,12 @@ function layoutInkElementAsStyledText(
 
   // First, lay out the non-wrapping segments
   row.noWrapSegments.forEach((segment) => {
-    nonWrappingContent.push(segment);
-    noWrappingWidth += stringWidth(segment.text);
+    segment.text = sanitize(segment.text);
+
+    if (segment.text) {
+      nonWrappingContent.push(segment);
+      noWrappingWidth += stringWidth(segment.text);
+    }
   });
 
   if (row.segments.length === 0) {
@@ -470,6 +474,7 @@ function layoutInkElementAsStyledText(
   }
 
   row.segments.forEach((segment) => {
+    segment.text = sanitize(segment.text);
     const linesFromSegment = segment.text.split('\n');
 
     linesFromSegment.forEach((lineText, lineIndex) => {
@@ -544,4 +549,22 @@ function layoutInkElementAsStyledText(
   for (const line of lines) {
     output.push(line);
   }
+}
+
+/* eslint-disable no-control-regex */ // control characters used intentionally to sanitize terminal output
+function sanitize(str: string): string {
+  return (
+    str
+      // Remove ANSI CSI sequences
+      .replace(
+        /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-ntqry=><~]/g,
+        '',
+      )
+      // Remove OSC (ESC ] … BEL) sequences
+      .replace(/\u001b\].*?\u0007/g, '')
+      // Strip remaining C0 control characters
+      .replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '')
+      // Handle backspaces (\b)
+      .replace(/.\u0008/g, '')
+  );
 }
